@@ -5,6 +5,14 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,6 +32,7 @@ import javax.crypto.spec.SecretKeySpec;
 import io.cmmc.netpieclient.microgear.OauthNetpieLibrary;
 
 public class MainActivity extends AppCompatActivity {
+    MqttAndroidClient mqttAndroidClient;
     public OauthNetpieLibrary oauthNetpieLibrary;
     public String name = "microgear.cache";
     //    public static String appidvalue, keyvalue, secretvalue;
@@ -35,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     public String appsecret = "ahKOgQWSE6h87Anc9QP5HJgdQ";
     public String appkey = "60qturoh80sRMXq";
     private String TAG = "MainActivity";
+    private String serverUri;
+    private String mqttuser, mqttclientid, mqttpassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,12 +69,72 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void setupMqttClient() {
+        Log.d(TAG, "> clientId: " + mqttclientid);
+        Log.d(TAG, "> mqttUser: " + mqttuser);
+        Log.d(TAG, "> mqttPassword: " + mqttpassword);
+        serverUri = "tcp://gb.netpie.io:1883";
+
+        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, mqttclientid);
+        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
+            @Override
+            public void connectComplete(boolean reconnect, String serverURI) {
+                if (reconnect) {
+                    addToHistory("[CON] Reconnected to : " + serverURI);
+                } else {
+                    addToHistory("[CON] Connected to: " + serverURI);
+                }
+//                subscribeToTopic();
+            }
+
+            @Override
+            public void connectionLost(Throwable cause) {
+                addToHistory("The Connection was lost.");
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage message) throws Exception {
+                addToHistory("Incoming message: " + new String(message.getPayload()));
+//                textView.setText(topic + " => " + new String(message.getPayload()));
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
+
+            }
+        });
+
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setCleanSession(true);
+        mqttConnectOptions.setUserName(mqttuser);
+        mqttConnectOptions.setPassword(mqttpassword.toCharArray());
+//        mqttConnectOptions.setAutomaticReconnect(true);
+
+        try {
+            Log.d(TAG, "setupMqttClient: BEING CONNECTED..");
+            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    Log.d(TAG, ">>>> onSuccess: ");
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    Log.d(TAG, "++ >>>> onFailure: "+ exception.getCause());
+                    asyncActionToken.getException();
+                }
+            });
+        } catch (MqttException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private void brokerconnect(String appid, String key, String secret) {
         File fi = new File(tempFile.toString());
         BufferedReader br;
         StringBuilder sb = new StringBuilder();
         String line;
-        String mqttuser, secrettoken, mqttclientid, secretid, mqttpassword, hkey, ckappkey;
+        String secrettoken, secretid, hkey, ckappkey;
         FileInputStream fis;
         try {
             fis = new FileInputStream(tempFile.toString());
@@ -89,9 +160,7 @@ public class MainActivity extends AppCompatActivity {
                 mqttpassword = mqttclientid + "%" + mqttuser;
                 byte[] result = mac.doFinal(mqttpassword.getBytes());
                 mqttpassword = io.cmmc.netpieclient.microgear.Base64.encode(result);
-                Log.d(TAG, "clientId: " + mqttclientid);
-                Log.d(TAG, "mqttUser: " + mqttuser);
-                Log.d(TAG, "mqttPassword: " + mqttpassword);
+                setupMqttClient();
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             } catch (InvalidKeyException e) {
@@ -105,5 +174,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void addToHistory(String mainText) {
+        Log.d(TAG, "[LOG:] addToHistory: " + mainText);
 
+    }
 }
