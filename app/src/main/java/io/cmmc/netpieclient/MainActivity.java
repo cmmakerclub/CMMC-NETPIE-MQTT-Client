@@ -41,8 +41,8 @@ public class MainActivity extends AppCompatActivity {
     public Context context;
 
     public String appid = "CMMC";
-    public String appsecret = "ahKOgQWSE6h87Anc9QP5HJgdQ";
     public String appkey = "60qturoh80sRMXq";
+    public String appsecret = "ahKOgQWSE6h87Anc9QP5HJgdQ";
     private String TAG = "MainActivity";
     private String serverUri;
     private String mqttuser, mqttclientid, mqttpassword;
@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         context = this;
         cDir = context.getCacheDir();
         tempFile = new File(cDir.getPath() + "/" + name);
+
         String a = oauthNetpieLibrary.create(appid, appkey, appsecret, tempFile.toString());
         Log.d(TAG, "onCreate: " + a);
         if (a.equals("yes")) {
@@ -64,8 +65,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (a.equals("secretandid")) {
             Log.d(TAG, "onCreate: App id,Key or Secret Invalid");
         } else {
-//            brokerconnect(appid, key, secret);
-//            context.bindService(new Intent(context, MicrogearService.class), serviceConnection, 0);
+            //brokerconnect(appid, key, secret);
         }
     }
 
@@ -108,19 +108,28 @@ public class MainActivity extends AppCompatActivity {
         mqttConnectOptions.setCleanSession(true);
         mqttConnectOptions.setUserName(mqttuser);
         mqttConnectOptions.setPassword(mqttpassword.toCharArray());
-//        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setAutomaticReconnect(true);
 
         try {
             Log.d(TAG, "setupMqttClient: BEING CONNECTED..");
             mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
+                    /*
                     Log.d(TAG, ">>>> onSuccess: ");
+                    String text = "Hello World";
+                    MqttMessage msg = new MqttMessage(text.getBytes());
+                    try {
+                        mqttAndroidClient.publish("/CMMC/gearname/hello/status", msg);
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                    */
                 }
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    Log.d(TAG, "++ >>>> onFailure: "+ exception.getCause());
+                    Log.d(TAG, "++ >>>> onFailure: " + exception.getCause());
                     asyncActionToken.getException();
                 }
             });
@@ -176,6 +185,5 @@ public class MainActivity extends AppCompatActivity {
 
     private void addToHistory(String mainText) {
         Log.d(TAG, "[LOG:] addToHistory: " + mainText);
-
     }
 }
